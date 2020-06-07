@@ -169,14 +169,17 @@ namespace tpge {
         unsigned m_Height;
         unsigned short m_PixelSize;
 
-        const char * m_Title;
+        const char *m_Title;
 
-        SDL_Window * m_Window;
-        SDL_Surface * m_Surface;
-        const Uint8 * m_KeyboardState;
+        SDL_Window *m_Window;
+        SDL_Renderer *m_Renderer;
+        SDL_Texture *m_ScreenTexture;
+        SDL_Texture *m_OverlayTexture;
+        Uint32 *m_Pixels;
 
-        SDL_Surface * m_Overlay;
-        SDL_Rect m_FullRect;
+        bool m_IsOverlayOn;
+
+        const Uint8 *m_KeyboardState;
 
         static const uint16_t font[96][12];
     };
