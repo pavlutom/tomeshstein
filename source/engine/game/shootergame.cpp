@@ -402,81 +402,84 @@ Uint32 CShooterGame::blendColor(Uint32 color1, Uint32 color2, float blend) {
 
 void CShooterGame::printWorld() {
     float distanceToScreen = (getScreenWidth() * 0.5f) / tan(m_FoV * 0.5f);
-    bool inside = m_Map[getMapIndex((int) m_Player.getX(), (int) m_Player.getY())] == ETile::ROOM;
+    bool isInside = m_Map[getMapIndex((int) m_Player.getX(), (int) m_Player.getY())] == ETile::ROOM;
 
     for (int x = 0; x < getScreenWidth(); x++) {
+        printWorldColumn(x, distanceToScreen, isInside);
+    }
+}
 
-        float angle = atan2f(x - getScreenWidth() * 0.5f, distanceToScreen);
+void CShooterGame::printWorldColumn(int x, float distanceToScreen, bool isInside) {
+    float angle = atan2f(x - getScreenWidth() * 0.5f, distanceToScreen);
 
-        float step = 0.005f;
-        float distance = 0.0f;
-        float dX = sinf(m_Player.getAngle() + angle) * step;
-        float dY = cosf(m_Player.getAngle() + angle) * step;
-        float beamX = m_Player.getX();
-        float beamY = m_Player.getY();
-        std::shared_ptr<CTexture> tex = m_Textures[0];
+    float step = 0.005f;
+    float distance = 0.0f;
+    float dX = sinf(m_Player.getAngle() + angle) * step;
+    float dY = cosf(m_Player.getAngle() + angle) * step;
+    float beamX = m_Player.getX();
+    float beamY = m_Player.getY();
+    std::shared_ptr<CTexture> tex = m_Textures[0];
 
-        while ((m_Map[getMapIndex((int) beamX, (int) beamY)] == ETile::EMPTY || m_Map[getMapIndex((int) beamX, (int) beamY)] == ETile::ROOM) && distance <= m_RenderDistance) {
-            distance += step;
-            beamX += dX;
-            beamY += dY;
-        }
-        m_DistanceBuffer[x] = distance;
+    while ((m_Map[getMapIndex((int) beamX, (int) beamY)] == ETile::EMPTY || m_Map[getMapIndex((int) beamX, (int) beamY)] == ETile::ROOM) && distance <= m_RenderDistance) {
+        distance += step;
+        beamX += dX;
+        beamY += dY;
+    }
+    m_DistanceBuffer[x] = distance;
 
-        ETile tile = m_Map[getMapIndex((int) beamX, (int) beamY)];
+    ETile tile = m_Map[getMapIndex((int) beamX, (int) beamY)];
 
-        switch (tile) {
-            case ETile::WALL:
-                tex = m_Textures[2];
-                break;
-            case ETile::RED_WALL:
-                tex = m_Textures[1];
-                break;
-            case ETile::DOOR:
-                tex = m_Textures[3];
-                break;
-            case ETile::END:
-                tex = m_Textures[25];
-                break;
-            case ETile::END_OPEN:
-                tex = m_Textures[26];
-                break;
-            case ETile::MOSS_WALL:
-                tex = m_Textures[27];
-                break;
-            default:
-                break;
-        }
+    switch (tile) {
+        case ETile::WALL:
+            tex = m_Textures[2];
+            break;
+        case ETile::RED_WALL:
+            tex = m_Textures[1];
+            break;
+        case ETile::DOOR:
+            tex = m_Textures[3];
+            break;
+        case ETile::END:
+            tex = m_Textures[25];
+            break;
+        case ETile::END_OPEN:
+            tex = m_Textures[26];
+            break;
+        case ETile::MOSS_WALL:
+            tex = m_Textures[27];
+            break;
+        default:
+            break;
+    }
 
-        int ceiling = (int) (getScreenHeight() * 0.5f - getScreenHeight() / distance / cosf(angle));
+    int ceiling = (int) (getScreenHeight() * 0.5f - getScreenHeight() / distance / cosf(angle));
 
-        float tX = beamY;
-        if (abs(beamX - round(beamX)) > abs(beamY - round(beamY))) {
-            tX = beamX;
-        }
+    float tX = beamY;
+    if (abs(beamX - round(beamX)) > abs(beamY - round(beamY))) {
+        tX = beamX;
+    }
 
-        for (int y = 0; y < getScreenHeight(); y++) {
-            if (y < ceiling) {
-                if (inside) {
-                    float shade = ((getScreenHeight() - y) - getScreenHeight() * 0.5f - getScreenHeight() / m_RenderDistance) /
-                                  (getScreenHeight() * 0.5f);
-                    drawPixel(x, y, blendColor(m_Palette[6], TPGEColor::BLACK, cbrtf(shade)));
-                } else {
-                    drawPixel(x, y, m_Palette[1]);
-                }
-            } else if (y < getScreenHeight() - ceiling) {
-                float shade = 1 - (distance / m_RenderDistance);
-                float tY = (float) (y - ceiling) / (getScreenHeight() - 2 * ceiling);
-                Uint32 col = tex->get(tX, tY);
-                drawPixel(x, y, blendColor(col, (inside ? TPGEColor::BLACK : m_Palette[3]), shade));
-            } else {
-                float shade = (y - getScreenHeight() * 0.5f - getScreenHeight() / m_RenderDistance) /
+    for (int y = 0; y < getScreenHeight(); y++) {
+        if (y < ceiling) {
+            if (isInside) {
+                float shade = ((getScreenHeight() - y) - getScreenHeight() * 0.5f - getScreenHeight() / m_RenderDistance) /
                               (getScreenHeight() * 0.5f);
-                if (inside) {
-                    drawPixel(x, y, blendColor(m_Palette[7], TPGEColor::BLACK, cbrtf(shade)));
-                } else {
-                    drawPixel(x, y, blendColor(m_Palette[2], m_Palette[4], cbrtf(shade)));
-                }
+                drawPixel(x, y, blendColor(m_Palette[6], TPGEColor::BLACK, cbrtf(shade)));
+            } else {
+                drawPixel(x, y, m_Palette[1]);
+            }
+        } else if (y < getScreenHeight() - ceiling) {
+            float shade = 1 - (distance / m_RenderDistance);
+            float tY = (float) (y - ceiling) / (getScreenHeight() - 2 * ceiling);
+            Uint32 col = tex->get(tX, tY);
+            drawPixel(x, y, blendColor(col, (isInside ? TPGEColor::BLACK : m_Palette[3]), shade));
+        } else {
+            float shade = (y - getScreenHeight() * 0.5f - getScreenHeight() / m_RenderDistance) /
+                          (getScreenHeight() * 0.5f);
+            if (isInside) {
+                drawPixel(x, y, blendColor(m_Palette[7], TPGEColor::BLACK, cbrtf(shade)));
+            } else {
+                drawPixel(x, y, blendColor(m_Palette[2], m_Palette[4], cbrtf(shade)));
             }
         }
     }

@@ -38,6 +38,7 @@ protected:
     Uint32 blendColor(Uint32 color1, Uint32 color2, float blend);
 
     void printWorld();
+    void printWorldColumn(int x, float distanceToScreen, bool isInside);
     void printHurt();
     void printGUI();
     void printObjects();
