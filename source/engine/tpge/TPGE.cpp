@@ -151,20 +151,15 @@ void tpge::CEngine::drawPixel(int x, int y, Uint32 color) {
 }
 
 void tpge::CEngine::blendPixel(int x, int y, float alpha, Uint32 color) {
-    for (int i = 0; i < m_PixelSize; i++) {
-        for (int j = 0; j < m_PixelSize; j++) {
-            Uint32 oldC = *((Uint32 *) ((Uint8 *) m_Surface->pixels + (y * m_PixelSize + i) * m_Surface->pitch +
-                                        (x * m_PixelSize + j) * 4));
+    Uint32 oldColor = *((Uint32 *) ((Uint8 *) m_Surface->pixels + (y * m_PixelSize) * m_Surface->pitch + (x * m_PixelSize) * 4));
+    Uint32 newColor = oldColor;
+    float inverseAlpha = 1 - alpha;
 
-            *((Uint8 *) m_Surface->pixels + (y * m_PixelSize + i) * m_Surface->pitch + (x * m_PixelSize + j) * 4 +
-              2) = (Uint8) (*((Uint8 *) (&color) + 2) * alpha + *((Uint8 *) (&oldC) + 2) * (1 - alpha));
-            *((Uint8 *) m_Surface->pixels + (y * m_PixelSize + i) * m_Surface->pitch + (x * m_PixelSize + j) * 4 +
-              1) = (Uint8) (*((Uint8 *) (&color) + 1) * alpha + *((Uint8 *) (&oldC) + 1) * (1 - alpha));
-            *((Uint8 *) m_Surface->pixels + (y * m_PixelSize + i) * m_Surface->pitch +
-              (x * m_PixelSize + j) * 4) = (Uint8) (*((Uint8 *) (&color) + 0) * alpha +
-                                                    *((Uint8 *) (&oldC)) * (1 - alpha));
-        }
-    }
+    *((Uint8 *) &newColor + 2) = (float)*((Uint8 *) &oldColor + 2) * inverseAlpha + (float)*((Uint8 *) &color + 2) * alpha;
+    *((Uint8 *) &newColor + 1) = (float)*((Uint8 *) &oldColor + 1) * inverseAlpha + (float)*((Uint8 *) &color + 1) * alpha;
+    *((Uint8 *) &newColor) = (float)*((Uint8 *) &oldColor) * inverseAlpha + (float)*((Uint8 *) &color) * alpha;
+
+    drawPixel(x, y, newColor);
 }
 
 void tpge::CEngine::blendScreen(float alpha, Uint32 color) {
