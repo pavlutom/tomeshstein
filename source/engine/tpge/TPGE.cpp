@@ -146,12 +146,8 @@ bool tpge::CEngine::isKeyPressed(SDL_Scancode key) {
 }
 
 void tpge::CEngine::drawPixel(int x, int y, Uint32 color) {
-    for (int i = 0; i < m_PixelSize; i++) {
-        for (int j = 0; j < m_PixelSize; j++) {
-            *((Uint32 *) ((Uint8 *) m_Surface->pixels + (y * m_PixelSize + i) * m_Surface->pitch +
-                          (x * m_PixelSize + j) * 4)) = color;
-        }
-    }
+    SDL_Rect pixel{x * m_PixelSize, y * m_PixelSize, m_PixelSize, m_PixelSize};
+    SDL_FillRect(m_Surface, &pixel, color);
 }
 
 void tpge::CEngine::blendPixel(int x, int y, float alpha, Uint32 color) {
