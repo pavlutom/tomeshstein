@@ -59,18 +59,22 @@ bool tpge::CEngine::construct(const char *title, unsigned width, unsigned height
 
     m_Title = title;
 
-    m_Surface = SDL_GetWindowSurface(m_Window);
+//    m_Surface = SDL_GetWindowSurface(m_Window);
     m_KeyboardState = SDL_GetKeyboardState(nullptr);
 
-    m_Overlay = SDL_CreateRGBSurface(0, m_Width * m_PixelSize, m_Height * m_PixelSize, m_Surface->format->BitsPerPixel,
-                                     0, 0, 0, 0);
-    SDL_SetSurfaceBlendMode(m_Overlay, SDL_BLENDMODE_BLEND);
+//    m_Overlay = SDL_CreateRGBSurface(0, m_Width * m_PixelSize, m_Height * m_PixelSize, m_Surface->format->BitsPerPixel,
+//                                     0, 0, 0, 0);
+//    SDL_SetSurfaceBlendMode(m_Overlay, SDL_BLENDMODE_BLEND);
 
-    m_FullRect = SDL_Rect();
-    m_FullRect.h = m_Height * m_PixelSize;
-    m_FullRect.w = m_Width * m_PixelSize;
-    m_FullRect.x = 0;
-    m_FullRect.y = 0;
+//    m_FullRect = SDL_Rect();
+//    m_FullRect.h = m_Height * m_PixelSize;
+//    m_FullRect.w = m_Width * m_PixelSize;
+//    m_FullRect.x = 0;
+//    m_FullRect.y = 0;
+
+    m_Renderer = SDL_CreateRenderer(m_Window, -1, SDL_RENDERER_ACCELERATED);
+    m_ScreenTexture = SDL_CreateTexture(m_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, m_Width * m_PixelSize, m_Height * m_PixelSize);
+    m_Pixels = (Uint8 *)malloc(m_Width * m_Height * m_PixelSize * m_PixelSize * 4);
 
     m_Root = true;
 
@@ -88,18 +92,26 @@ bool tpge::CEngine::inWindowOf(const tpge::CEngine &other) {
 
     m_Title = other.m_Title;
 
-    m_Surface = SDL_GetWindowSurface(m_Window);
+//    m_Surface = SDL_GetWindowSurface(m_Window);
     m_KeyboardState = SDL_GetKeyboardState(nullptr);
 
-    m_Overlay = SDL_CreateRGBSurface(0, m_Width * m_PixelSize, m_Height * m_PixelSize, m_Surface->format->BitsPerPixel,
-                                     0, 0, 0, 0);
-    SDL_SetSurfaceBlendMode(m_Overlay, SDL_BLENDMODE_BLEND);
+//    m_Overlay = SDL_CreateRGBSurface(0, m_Width * m_PixelSize, m_Height * m_PixelSize, m_Surface->format->BitsPerPixel,
+//                                     0, 0, 0, 0);
+//    SDL_SetSurfaceBlendMode(m_Overlay, SDL_BLENDMODE_BLEND);
 
-    m_FullRect = SDL_Rect();
-    m_FullRect.h = m_Height * m_PixelSize;
-    m_FullRect.w = m_Width * m_PixelSize;
-    m_FullRect.x = 0;
-    m_FullRect.y = 0;
+//    m_FullRect = SDL_Rect();
+//    m_FullRect.h = m_Height * m_PixelSize;
+//    m_FullRect.w = m_Width * m_PixelSize;
+//    m_FullRect.x = 0;
+//    m_FullRect.y = 0;
+
+    m_Renderer = other.m_Renderer;
+    m_ScreenTexture = other.m_ScreenTexture;
+    m_Pixels = other.m_Pixels;
+
+//    m_Renderer = SDL_CreateRenderer(m_Window, -1, SDL_RENDERER_ACCELERATED);
+//    m_ScreenTexture = SDL_CreateTexture(m_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, m_Width * m_PixelSize, m_Height * m_PixelSize);
+//    m_Pixels = (Uint8 *)malloc(m_Width * m_Height * m_PixelSize * m_PixelSize * 4);
 
     m_Root = false;
 
@@ -108,15 +120,18 @@ bool tpge::CEngine::inWindowOf(const tpge::CEngine &other) {
 
 
 void tpge::CEngine::destroy() {
-    SDL_FreeSurface(m_Surface);
-    SDL_FreeSurface(m_Overlay);
+//    SDL_FreeSurface(m_Surface);
+//    SDL_FreeSurface(m_Overlay);
 
     SDL_DestroyWindow(m_Window);
     SDL_Quit();
 }
 
 void tpge::CEngine::printFrame() {
-    SDL_UpdateWindowSurface(m_Window);
+    SDL_UpdateTexture(m_ScreenTexture, NULL, m_Pixels, m_Width * m_PixelSize * 4);
+    SDL_RenderCopy(m_Renderer, m_ScreenTexture, NULL, NULL);
+    SDL_RenderPresent(m_Renderer);
+//    SDL_UpdateWindowSurface(m_Window);
 }
 
 int tpge::CEngine::run() {
@@ -146,11 +161,17 @@ bool tpge::CEngine::isKeyPressed(SDL_Scancode key) {
 }
 
 void tpge::CEngine::drawPixel(int x, int y, Uint32 color) {
-    SDL_Rect pixel{x * m_PixelSize, y * m_PixelSize, m_PixelSize, m_PixelSize};
-    SDL_FillRect(m_Surface, &pixel, color);
+    for (int i = 0; i < m_PixelSize; ++i) {
+        for (int j = 0; j < m_PixelSize; ++j) {
+            *((Uint32 *)&m_Pixels[(m_Width * m_PixelSize * (y * m_PixelSize + i)) * 4 + (x * m_PixelSize + j) * 4]) = color;
+        }
+    }
+//    SDL_Rect pixel{x * m_PixelSize, y * m_PixelSize, m_PixelSize, m_PixelSize};
+//    SDL_FillRect(m_Surface, &pixel, color);
 }
 
 void tpge::CEngine::blendPixel(int x, int y, float alpha, Uint32 color) {
+    return;
     Uint32 oldColor = *((Uint32 *) ((Uint8 *) m_Surface->pixels + (y * m_PixelSize) * m_Surface->pitch + (x * m_PixelSize) * 4));
     Uint32 newColor = oldColor;
     float inverseAlpha = 1 - alpha;
@@ -163,6 +184,7 @@ void tpge::CEngine::blendPixel(int x, int y, float alpha, Uint32 color) {
 }
 
 void tpge::CEngine::blendScreen(float alpha, Uint32 color) {
+    return;
     SDL_FillRect(m_Overlay, nullptr, color);
     SDL_SetSurfaceAlphaMod(m_Overlay, (Uint8) (255 * alpha));
 
@@ -170,6 +192,7 @@ void tpge::CEngine::blendScreen(float alpha, Uint32 color) {
 }
 
 void tpge::CEngine::drawRectangle(int x, int y, int width, int height, Uint32 color) {
+    return;
     SDL_FillRect(m_Overlay, nullptr, color);
     SDL_Rect r;
     r.x = x * m_PixelSize;
