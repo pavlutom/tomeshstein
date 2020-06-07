@@ -195,6 +195,23 @@ void CShooterGame::onUserCreate() {
     /* 07 - floor        */ m_Palette.push_back(floor);
 
     m_DistanceBuffer = new float[getScreenWidth()];
+
+    int screenH = getScreenHeight();
+    m_WorldCacheOutside = new Uint32[screenH];
+    m_WorldCacheInside = new Uint32[screenH];
+    for (int y = 0; y < screenH / 2; ++y) {
+        float shade = cbrtf(((screenH - y) - screenH * 0.5f - screenH / m_RenderDistance) /
+                            (screenH * 0.5f));
+
+        // ceiling
+        m_WorldCacheOutside[y] = m_Palette[1];
+        m_WorldCacheInside[y] = blendColor(m_Palette[6], TPGEColor::BLACK, shade);
+
+        // floor
+        m_WorldCacheOutside[screenH - 1 - y] = blendColor(m_Palette[2], m_Palette[4], shade);
+        m_WorldCacheInside[screenH - 1 - y] = blendColor(m_Palette[7], TPGEColor::BLACK, shade);
+    }
+
     m_HoldingPrevGun = false;
     m_HoldingNextGun = false;
     m_HurtTime = 0.0f;
@@ -473,27 +490,13 @@ void CShooterGame::printWorldColumn(int x, float distanceToScreen, bool isInside
     }
 
     for (int y = 0; y < getScreenHeight(); y++) {
-        if (y < ceiling) {
-            if (isInside) {
-                float shade = ((getScreenHeight() - y) - getScreenHeight() * 0.5f - getScreenHeight() / m_RenderDistance) /
-                              (getScreenHeight() * 0.5f);
-                drawPixel(x, y, blendColor(m_Palette[6], TPGEColor::BLACK, cbrtf(shade)));
-            } else {
-                drawPixel(x, y, m_Palette[1]);
-            }
-        } else if (y < getScreenHeight() - ceiling) {
+        if (y < ceiling || y > getScreenHeight() - ceiling) {
+            drawPixel(x, y, isInside ? m_WorldCacheInside[y] : m_WorldCacheOutside[y]);
+        } else {
             float shade = 1 - (distance / m_RenderDistance);
             float tY = (float) (y - ceiling) / (getScreenHeight() - 2 * ceiling);
             Uint32 col = tex->get(tX, tY);
             drawPixel(x, y, blendColor(col, (isInside ? TPGEColor::BLACK : m_Palette[3]), shade));
-        } else {
-            float shade = (y - getScreenHeight() * 0.5f - getScreenHeight() / m_RenderDistance) /
-                          (getScreenHeight() * 0.5f);
-            if (isInside) {
-                drawPixel(x, y, blendColor(m_Palette[7], TPGEColor::BLACK, cbrtf(shade)));
-            } else {
-                drawPixel(x, y, blendColor(m_Palette[2], m_Palette[4], cbrtf(shade)));
-            }
         }
     }
 }

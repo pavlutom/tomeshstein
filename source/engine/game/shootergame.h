@@ -74,6 +74,10 @@ protected:
 
     float *m_DistanceBuffer;
 
+    int m_CeilingY;
+    Uint32 *m_WorldCacheOutside;
+    Uint32 *m_WorldCacheInside;
+
     bool m_HoldingPrevGun;
     bool m_HoldingNextGun;
 
