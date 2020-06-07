@@ -18,7 +18,7 @@
 
 class CShooterGame : public tpge::CEngine {
 public:
-    CShooterGame(const char * title, unsigned width, unsigned height, unsigned short pixelsize, bool fullscreen, const char * mapName);
+    CShooterGame(const char * title, unsigned width, unsigned height, unsigned short pixelsize, bool fullscreen, unsigned short renderingThreadCount, const char * mapName);
     CShooterGame(const tpge::CEngine & other, const char * mapName);
 
 protected:

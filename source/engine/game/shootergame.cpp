@@ -6,9 +6,9 @@
 
 
 CShooterGame::CShooterGame(const char *title, unsigned width, unsigned height, unsigned short pixelsize,
-                           bool fullscreen, const char *mapName)
+                           bool fullscreen, unsigned short renderingThreadCount, const char *mapName)
         : tpge::CEngine(), m_MapName(mapName) {
-    construct(title, width, height, pixelsize, fullscreen);
+    construct(title, width, height, pixelsize, fullscreen, renderingThreadCount);
 }
 
 CShooterGame::CShooterGame(const tpge::CEngine & other, const char *mapName)
@@ -404,7 +404,7 @@ void CShooterGame::printWorld() {
     float distanceToScreen = (getScreenWidth() * 0.5f) / tan(m_FoV * 0.5f);
     bool isInside = m_Map[getMapIndex((int) m_Player.getX(), (int) m_Player.getY())] == ETile::ROOM;
 
-    int numThreads = 4;
+    unsigned short numThreads = getRenderingThreadCount();
     int xPart = getScreenWidth() / numThreads;
     std::thread threads[numThreads];
     for (int t = 0; t < numThreads; ++t) {

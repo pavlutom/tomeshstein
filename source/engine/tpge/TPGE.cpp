@@ -13,7 +13,7 @@ tpge::CEngine::~CEngine() {
 }
 
 bool tpge::CEngine::construct(const char *title, unsigned width, unsigned height, unsigned short pixelSize,
-                              bool fullscreen) {
+                              bool fullscreen, unsigned short renderingThreadCount) {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         SDL_Log("could not initialize sdl2: %s", SDL_GetError());
         return false;
@@ -22,6 +22,7 @@ bool tpge::CEngine::construct(const char *title, unsigned width, unsigned height
     m_Width = width;
     m_Height = height;
     m_PixelSize = pixelSize;
+    m_RenderingThreadCount = renderingThreadCount;
 
     if (fullscreen) {
         SDL_DisplayMode dm;
@@ -83,6 +84,7 @@ bool tpge::CEngine::inWindowOf(const tpge::CEngine &other) {
     m_Width = other.m_Width;
     m_Height = other.m_Height;
     m_PixelSize = other.m_PixelSize;
+    m_RenderingThreadCount = other.m_RenderingThreadCount;
 
     m_Window = other.m_Window;
 
@@ -240,6 +242,10 @@ unsigned tpge::CEngine::getScreenHeight() {
 
 unsigned short tpge::CEngine::getPixelSize() {
     return m_PixelSize;
+}
+
+unsigned short tpge::CEngine::getRenderingThreadCount() {
+    return m_RenderingThreadCount;
 }
 
 const char *tpge::CEngine::getTitle() {

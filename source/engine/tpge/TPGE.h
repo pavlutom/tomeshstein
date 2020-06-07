@@ -16,7 +16,7 @@ namespace tpge {
         CEngine();
         ~CEngine();
 
-        bool construct(const char *title, unsigned width, unsigned height, unsigned short pixelSize, bool fullscreen);
+        bool construct(const char *title, unsigned width, unsigned height, unsigned short pixelSize, bool fullscreen, unsigned short renderingThreadCount);
         bool inWindowOf(const CEngine &other);
         void destroy();
         int run();
@@ -153,6 +153,7 @@ namespace tpge {
         unsigned getScreenWidth();
         unsigned getScreenHeight();
         unsigned short getPixelSize();
+        unsigned short getRenderingThreadCount();
         const char * getTitle();
 
         template<typename ...Args>
@@ -168,6 +169,7 @@ namespace tpge {
         unsigned m_Width;
         unsigned m_Height;
         unsigned short m_PixelSize;
+        unsigned short m_RenderingThreadCount;
 
         const char *m_Title;
 
