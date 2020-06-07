@@ -73,8 +73,10 @@ bool tpge::CEngine::construct(const char *title, unsigned width, unsigned height
 //    m_FullRect.y = 0;
 
     m_Renderer = SDL_CreateRenderer(m_Window, -1, SDL_RENDERER_ACCELERATED);
-    m_ScreenTexture = SDL_CreateTexture(m_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, m_Width * m_PixelSize, m_Height * m_PixelSize);
-    m_Pixels = (Uint8 *)malloc(m_Width * m_Height * m_PixelSize * m_PixelSize * 4);
+    SDL_RenderSetLogicalSize(m_Renderer, m_Width, m_Height);
+    SDL_RenderSetIntegerScale(m_Renderer, SDL_TRUE);
+    m_ScreenTexture = SDL_CreateTexture(m_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, m_Width, m_Height);
+    m_Pixels = (Uint8 *)malloc(m_Width * m_Height * 4);
 
     m_Root = true;
 
@@ -106,6 +108,7 @@ bool tpge::CEngine::inWindowOf(const tpge::CEngine &other) {
 //    m_FullRect.y = 0;
 
     m_Renderer = other.m_Renderer;
+//    SDL_RenderSetLogicalSize(m_Renderer, m_Width, m_Height);
     m_ScreenTexture = other.m_ScreenTexture;
     m_Pixels = other.m_Pixels;
 
@@ -128,7 +131,7 @@ void tpge::CEngine::destroy() {
 }
 
 void tpge::CEngine::printFrame() {
-    SDL_UpdateTexture(m_ScreenTexture, NULL, m_Pixels, m_Width * m_PixelSize * 4);
+    SDL_UpdateTexture(m_ScreenTexture, NULL, m_Pixels, m_Width * 4);
     SDL_RenderCopy(m_Renderer, m_ScreenTexture, NULL, NULL);
     SDL_RenderPresent(m_Renderer);
 //    SDL_UpdateWindowSurface(m_Window);
@@ -161,11 +164,7 @@ bool tpge::CEngine::isKeyPressed(SDL_Scancode key) {
 }
 
 void tpge::CEngine::drawPixel(int x, int y, Uint32 color) {
-    for (int i = 0; i < m_PixelSize; ++i) {
-        for (int j = 0; j < m_PixelSize; ++j) {
-            *((Uint32 *)&m_Pixels[(m_Width * m_PixelSize * (y * m_PixelSize + i)) * 4 + (x * m_PixelSize + j) * 4]) = color;
-        }
-    }
+    *((Uint32 *)&m_Pixels[m_Width * y * 4 + x * 4]) = color;
 //    SDL_Rect pixel{x * m_PixelSize, y * m_PixelSize, m_PixelSize, m_PixelSize};
 //    SDL_FillRect(m_Surface, &pixel, color);
 }
