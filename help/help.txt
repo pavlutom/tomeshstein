@@ -1,0 +1,10 @@
+Controls:
+W       - move forward
+S       - move backward
+A       - turn left
+D       - turn right
+SHIFT   - strafe (A - move left, D - move right)
+L       - focus (slows movement)
+K       - shoot
+J       - previous gun
+I       - next gun

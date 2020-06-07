@@ -1,0 +1,49 @@
+width:              ??
+height:             ??
+player_x:           ??
+player_y:           ??
+
+sky:                0x????????
+ground:             0x????????
+ceiling:            0x????????
+floor:              0x????????
+render_distance:    ??
+
+
+// enemies
+
+// a line should look like: "enemy: <enemy_type> {[X, Y], [X, Y], ...}"
+
+
+// powerups (health, guns, etc.)
+
+// a line should look like: "powerup: <powerup_type> [X, Y]"
+
+
+// keys
+
+powerup:    8 [X, Y]
+powerup:    9 [X, Y]
+powerup:   10 [X, Y]
+powerup:   11 [X, Y]
+powerup:   12 [X, Y]
+powerup:   13 [X, Y]
+
+
+// map structure
+//
+// LEGEND:
+// # - gray brick wall
+// @ - red brick wall
+// & - moss brick wall
+// . - empty space
+// + - empty space (inside/room)
+// D - door
+// F - final door (level end)
+
+map:
+?????
+?????
+?????
+?????
+?????
