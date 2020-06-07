@@ -408,7 +408,9 @@ void CShooterGame::printWorld() {
     int xPart = getScreenWidth() / numThreads;
     std::thread threads[numThreads];
     for (int t = 0; t < numThreads; ++t) {
-        threads[t] = std::thread(&CShooterGame::printWorldPart, this, t * xPart, (t + 1) * xPart, distanceToScreen, isInside);
+        int from = t * xPart;
+        int to = t + 1 == numThreads ? getScreenWidth() : (t + 1) * xPart;
+        threads[t] = std::thread(&CShooterGame::printWorldPart, this, from, to, distanceToScreen, isInside);
     }
     for (int t = 0; t < numThreads; ++t) {
         threads[t].join();
