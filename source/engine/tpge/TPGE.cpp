@@ -76,7 +76,9 @@ bool tpge::CEngine::construct(const char *title, unsigned width, unsigned height
     SDL_RenderSetLogicalSize(m_Renderer, m_Width, m_Height);
     SDL_RenderSetIntegerScale(m_Renderer, SDL_TRUE);
     m_ScreenTexture = SDL_CreateTexture(m_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, m_Width, m_Height);
-    m_Pixels = (Uint8 *)malloc(m_Width * m_Height * 4);
+    m_OverlayTexture = SDL_CreateTexture(m_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, m_Width, m_Height);
+    SDL_SetTextureBlendMode(m_OverlayTexture, SDL_BLENDMODE_BLEND);
+    m_Pixels = (Uint32 *)malloc(m_Width * m_Height * sizeof(Uint32));
 
     m_Root = true;
 
@@ -110,6 +112,7 @@ bool tpge::CEngine::inWindowOf(const tpge::CEngine &other) {
     m_Renderer = other.m_Renderer;
 //    SDL_RenderSetLogicalSize(m_Renderer, m_Width, m_Height);
     m_ScreenTexture = other.m_ScreenTexture;
+    m_OverlayTexture = other.m_OverlayTexture;
     m_Pixels = other.m_Pixels;
 
 //    m_Renderer = SDL_CreateRenderer(m_Window, -1, SDL_RENDERER_ACCELERATED);
@@ -131,10 +134,13 @@ void tpge::CEngine::destroy() {
 }
 
 void tpge::CEngine::printFrame() {
-    SDL_UpdateTexture(m_ScreenTexture, NULL, m_Pixels, m_Width * 4);
-    SDL_RenderCopy(m_Renderer, m_ScreenTexture, NULL, NULL);
+    SDL_UpdateTexture(m_ScreenTexture, nullptr, m_Pixels, m_Width * 4);
+    SDL_RenderCopy(m_Renderer, m_ScreenTexture, nullptr, nullptr);
+    if (m_IsOverlayOn) {
+        SDL_RenderCopy(m_Renderer, m_OverlayTexture, nullptr, nullptr);
+        m_IsOverlayOn = false;
+    }
     SDL_RenderPresent(m_Renderer);
-//    SDL_UpdateWindowSurface(m_Window);
 }
 
 int tpge::CEngine::run() {
@@ -164,42 +170,35 @@ bool tpge::CEngine::isKeyPressed(SDL_Scancode key) {
 }
 
 void tpge::CEngine::drawPixel(int x, int y, Uint32 color) {
-    *((Uint32 *)&m_Pixels[m_Width * y * 4 + x * 4]) = color;
-//    SDL_Rect pixel{x * m_PixelSize, y * m_PixelSize, m_PixelSize, m_PixelSize};
-//    SDL_FillRect(m_Surface, &pixel, color);
+    m_Pixels[m_Width * y + x] = color;
 }
 
 void tpge::CEngine::blendPixel(int x, int y, float alpha, Uint32 color) {
-    return;
-    Uint32 oldColor = *((Uint32 *) ((Uint8 *) m_Surface->pixels + (y * m_PixelSize) * m_Surface->pitch + (x * m_PixelSize) * 4));
+    Uint32 oldColor = m_Pixels[m_Width * y + x];
     Uint32 newColor = oldColor;
     float inverseAlpha = 1 - alpha;
 
-    *((Uint8 *) &newColor + 2) = (float)*((Uint8 *) &oldColor + 2) * inverseAlpha + (float)*((Uint8 *) &color + 2) * alpha;
-    *((Uint8 *) &newColor + 1) = (float)*((Uint8 *) &oldColor + 1) * inverseAlpha + (float)*((Uint8 *) &color + 1) * alpha;
-    *((Uint8 *) &newColor) = (float)*((Uint8 *) &oldColor) * inverseAlpha + (float)*((Uint8 *) &color) * alpha;
+    ((Uint8 *) &newColor)[2] = (float)((Uint8 *) &oldColor)[2] * inverseAlpha + (float)((Uint8 *) &color)[2] * alpha;
+    ((Uint8 *) &newColor)[1] = (float)((Uint8 *) &oldColor)[1] * inverseAlpha + (float)((Uint8 *) &color)[1] * alpha;
+    ((Uint8 *) &newColor)[0] = (float)((Uint8 *) &oldColor)[0] * inverseAlpha + (float)((Uint8 *) &color)[0] * alpha;
 
     drawPixel(x, y, newColor);
 }
 
 void tpge::CEngine::blendScreen(float alpha, Uint32 color) {
-    return;
-    SDL_FillRect(m_Overlay, nullptr, color);
-    SDL_SetSurfaceAlphaMod(m_Overlay, (Uint8) (255 * alpha));
-
-    SDL_BlitSurface(m_Overlay, nullptr, m_Surface, &m_FullRect);
+    SDL_SetRenderTarget(m_Renderer, m_OverlayTexture);
+    SDL_SetRenderDrawColor(m_Renderer, ((Uint8 *)&color)[2], ((Uint8 *)&color)[1], ((Uint8 *)&color)[0], alpha * 255);
+    SDL_RenderFillRect(m_Renderer, nullptr);
+    SDL_SetRenderTarget(m_Renderer, nullptr);
+    m_IsOverlayOn = true;
 }
 
 void tpge::CEngine::drawRectangle(int x, int y, int width, int height, Uint32 color) {
-    return;
-    SDL_FillRect(m_Overlay, nullptr, color);
-    SDL_Rect r;
-    r.x = x * m_PixelSize;
-    r.y = y * m_PixelSize;
-    r.w = width * m_PixelSize;
-    r.h = height * m_PixelSize;
-
-    SDL_BlitSurface(m_Overlay, &r, m_Surface, &r);
+    for (int i = y; i < height + y; ++i) {
+        for (int j = x; j < width + x; ++j) {
+            drawPixel(j, i, color);
+        }
+    }
 }
 
 bool tpge::CEngine::readText(char *buffer, int x, int y, Uint32 color, short scale) {

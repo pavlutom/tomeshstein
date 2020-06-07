@@ -175,10 +175,12 @@ namespace tpge {
         SDL_Surface *m_Surface;
         SDL_Renderer *m_Renderer;
         SDL_Texture *m_ScreenTexture;
+        SDL_Texture *m_OverlayTexture;
 
-        Uint8 *m_Pixels;
+        Uint32 *m_Pixels;
 
         SDL_Surface *m_Overlay;
+        bool m_IsOverlayOn;
         SDL_Rect m_FullRect;
 
         const Uint8 *m_KeyboardState;
