@@ -8,6 +8,7 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <thread>
 
 #include "../tpge/TPGE.h"
 #include "../../objects/gameobject.h"
@@ -38,6 +39,7 @@ protected:
     Uint32 blendColor(Uint32 color1, Uint32 color2, float blend);
 
     void printWorld();
+    void printWorldPart(int xFrom, int xTo, float distanceToScreen, bool isInside);
     void printWorldColumn(int x, float distanceToScreen, bool isInside);
     void printHurt();
     void printGUI();

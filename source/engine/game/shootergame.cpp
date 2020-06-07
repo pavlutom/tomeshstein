@@ -404,7 +404,18 @@ void CShooterGame::printWorld() {
     float distanceToScreen = (getScreenWidth() * 0.5f) / tan(m_FoV * 0.5f);
     bool isInside = m_Map[getMapIndex((int) m_Player.getX(), (int) m_Player.getY())] == ETile::ROOM;
 
-    for (int x = 0; x < getScreenWidth(); x++) {
+    int numThreads = 4;
+    int xPart = getScreenWidth() / numThreads;
+    std::thread threads[numThreads];
+    for (int t = 0; t < numThreads; ++t) {
+        threads[t] = std::thread(&CShooterGame::printWorldPart, this, t * xPart, (t + 1) * xPart, distanceToScreen, isInside);
+    }
+    for (int t = 0; t < numThreads; ++t) {
+        threads[t].join();
+    }
+}
+void CShooterGame::printWorldPart(int xFrom, int xTo, float distanceToScreen, bool isInside) {
+    for (int x = xFrom; x < xTo; ++x) {
         printWorldColumn(x, distanceToScreen, isInside);
     }
 }
