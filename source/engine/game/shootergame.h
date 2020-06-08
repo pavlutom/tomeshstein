@@ -49,6 +49,7 @@ protected:
     void printHurt();
     void printGUI();
     void printObjects();
+    void printObjectsPart(float *viewAngles, int xFrom, int xTo, float distanceToScreen, bool isInside);
     void printMap();
     void printCrosshair();
     void printHealthBar();
