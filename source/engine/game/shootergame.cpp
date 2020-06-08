@@ -247,8 +247,6 @@ bool CShooterGame::onUserUpdate(float elapsedTime, int & signal) {
 
     printWorld();
 
-    printObjects();
-
     if (m_HurtTime > 0) {
         m_HurtTime -= elapsedTime;
         printHurt();
@@ -449,25 +447,77 @@ void CShooterGame::printWorld() {
     float distanceToScreen = (getScreenWidth() * 0.5f) / tan(m_FoV * 0.5f);
     bool isInside = m_Map[getMapIndex((int) m_Player.getX(), (int) m_Player.getY())] == ETile::ROOM;
 
+    // calculate view angles for objects
+    const std::vector<std::shared_ptr<CGameObject>> &objects = m_Objects.getAll();
+    float *viewAngles = new float[objects.size()];
+    for (int i = 0; i < objects.size(); ++i) {
+        float angle = atan2f(cosf(m_Player.getAngle()), sinf(m_Player.getAngle())) - objects[i]->getPlayerViewAngle();
+        angle += (angle < -3.14f ? 6.28f : (angle > 3.14 ? -6.28 : 0.0f));
+        viewAngles[i] = angle;
+    }
+
+    // calculate and render the environment and objects
+    // each one of n threads takes care of 1/n width of the screen
     unsigned short numThreads = getRenderingThreadCount();
     int xPart = getScreenWidth() / numThreads;
     std::thread threads[numThreads];
     for (int t = 0; t < numThreads; ++t) {
         int from = t * xPart;
         int to = t + 1 == numThreads ? getScreenWidth() : (t + 1) * xPart;
-        threads[t] = std::thread(&CShooterGame::printWorldPart, this, from, to, distanceToScreen, isInside);
+        threads[t] = std::thread(&CShooterGame::printWorldPart, this, viewAngles, from, to, distanceToScreen, isInside);
     }
     for (int t = 0; t < numThreads; ++t) {
         threads[t].join();
     }
 }
-void CShooterGame::printWorldPart(int xFrom, int xTo, float distanceToScreen, bool isInside) {
+void CShooterGame::printWorldPart(float *objectViewAngles, int xFrom, int xTo, float distanceToScreen, bool isInside) {
+    const std::vector<std::shared_ptr<CGameObject>> &objects = m_Objects.getAll();
+
+    // print environment
     for (int x = xFrom; x < xTo; ++x) {
-        printWorldColumn(x, distanceToScreen, isInside);
+        printEnvironmentColumn(x, distanceToScreen, isInside);
+    }
+
+    // print objects
+    for (int i = 0; i < objects.size(); ++i) {
+        if (objects[i]->getDistanceFromPlayer() <= 0.5f ||
+            objects[i]->getDistanceFromPlayer() > m_RenderDistance ||
+            fabsf(objectViewAngles[i]) > m_FoV * 0.65f) continue; // object is not visible -> skip
+
+        std::shared_ptr<CTexture> texture = objects[i]->getTexture();
+
+        float perspectiveScale = 1.0f / objects[i]->getDistanceFromPlayer() / cosf(objectViewAngles[i]);
+
+        float height = getScreenHeight() * objects[i]->getScale() * 2 * perspectiveScale;
+        float width = height * texture->getAspectRatio();
+
+        int ObjectX = (int)(distanceToScreen * tanf(objectViewAngles[i]) + 0.5f * (getScreenWidth() - width));
+        int objectY = (int)(getScreenHeight() * (0.5f - perspectiveScale) + ((1 - objects[i]->getScale()) * 0.5f * height / objects[i]->getScale()));
+
+        for (int x = 0; x < width; ++x) {
+            if (objects[i]->getDistanceFromPlayer() > m_DistanceBuffer[ObjectX + x])
+                continue;
+
+            for (int y = 0; y < height; ++y) {
+                Uint32 color = texture->get(x / width, y / height);
+
+                if (!(color & 0x00FFFFFF))  // black color means transparent
+                    continue;
+
+                int screenX = ObjectX + x;
+                int screenY = objectY + y;
+
+                // render only within the specified x coordinates (thread's portion of screen)
+                if (screenX >= xFrom && screenX < xTo && screenY >= 0 && screenY < getScreenHeight()) {
+                    float shade = sqrt(1 - (objects[i]->getDistanceFromPlayer() / m_RenderDistance));
+                    drawPixel(screenX, screenY, blendColor(color, (isInside ? TPGEColor::BLACK : m_Palette[3]), shade));
+                }
+            }
+        }
     }
 }
 
-void CShooterGame::printWorldColumn(int x, float distanceToScreen, bool isInside) {
+void CShooterGame::printEnvironmentColumn(int x, float distanceToScreen, bool isInside) {
     float angle = atan2f(x - getScreenWidth() * 0.5f, distanceToScreen);
 
     float step = 0.005f;
@@ -516,75 +566,6 @@ void CShooterGame::printGUI() {
     printHealthBar();
     printGun();
     printKeys();
-}
-
-void CShooterGame::printObjects() {
-    float distanceToScreen = (getScreenWidth() * 0.5f) / tan(m_FoV * 0.5f);
-    bool isInside = m_Map[getMapIndex((int) m_Player.getX(), (int) m_Player.getY())] == ETile::ROOM;
-
-    const std::vector<std::shared_ptr<CGameObject>> &objects = m_Objects.getAll();
-    float *viewAngles = new float[objects.size()];
-    for (int i = 0; i < objects.size(); ++i) {
-        float angle = atan2f(cosf(m_Player.getAngle()), sinf(m_Player.getAngle())) - objects[i]->getPlayerViewAngle();
-        angle += (angle < -3.14f ? 6.28f : (angle > 3.14 ? -6.28 : 0.0f));
-        viewAngles[i] = angle;
-    }
-
-    unsigned short numThreads = getRenderingThreadCount();
-    int xPart = getScreenWidth() / numThreads;
-    std::thread threads[numThreads];
-    for (int t = 0; t < numThreads; ++t) {
-        int from = t * xPart;
-        int to = t + 1 == numThreads ? getScreenWidth() : (t + 1) * xPart;
-        threads[t] = std::thread(&CShooterGame::printObjectsPart, this, viewAngles, from, to, distanceToScreen, isInside);
-    }
-    for (int t = 0; t < numThreads; ++t) {
-        threads[t].join();
-    }
-
-    delete[] viewAngles;
-}
-
-
-
-void CShooterGame::printObjectsPart(float *viewAngles, int xFrom, int xTo, float distanceToScreen, bool isInside) {
-    const std::vector<std::shared_ptr<CGameObject>> &objects = m_Objects.getAll();
-    for (int i = 0; i < objects.size(); ++i) {
-        if (objects[i]->getDistanceFromPlayer() <= 0.5f ||
-            objects[i]->getDistanceFromPlayer() > m_RenderDistance ||
-            fabsf(viewAngles[i]) > m_FoV * 0.65f) continue; // object is not visible -> skip
-
-        std::shared_ptr<CTexture> texture = objects[i]->getTexture();
-
-        float perspectiveScale = 1.0f / objects[i]->getDistanceFromPlayer() / cosf(viewAngles[i]);
-
-        float height = getScreenHeight() * objects[i]->getScale() * 2 * perspectiveScale;
-        float width = height * texture->getAspectRatio();
-
-        int ObjectX = (int)(distanceToScreen * tanf(viewAngles[i]) + 0.5f * (getScreenWidth() - width));
-        int objectY = (int)(getScreenHeight() * (0.5f - perspectiveScale) + ((1 - objects[i]->getScale()) * 0.5f * height / objects[i]->getScale()));
-
-        for (int x = 0; x < width; ++x) {
-            if (objects[i]->getDistanceFromPlayer() > m_DistanceBuffer[ObjectX + x])
-                continue;
-
-            for (int y = 0; y < height; ++y) {
-                Uint32 color = texture->get(x / width, y / height);
-
-                if (!(color & 0x00FFFFFF))  // black color means transparent
-                    continue;
-
-                int screenX = ObjectX + x;
-                int screenY = objectY + y;
-
-                // render only within the specified x coordinates (thread's portion of screen)
-                if (screenX >= xFrom && screenX < xTo && screenY >= 0 && screenY < getScreenHeight()) {
-                    float shade = sqrt(1 - (objects[i]->getDistanceFromPlayer() / m_RenderDistance));
-                    drawPixel(screenX, screenY, blendColor(color, (isInside ? TPGEColor::BLACK : m_Palette[3]), shade));
-                }
-            }
-        }
-    }
 }
 
 void CShooterGame::printMap() {

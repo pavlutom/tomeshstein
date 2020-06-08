@@ -44,12 +44,11 @@ protected:
     std::shared_ptr<CTexture> getTileTexture(ETile tile);
 
     void printWorld();
-    void printWorldPart(int xFrom, int xTo, float distanceToScreen, bool isInside);
-    void printWorldColumn(int x, float distanceToScreen, bool isInside);
+    void printWorldPart(float *objectViewAngles, int xFrom, int xTo, float distanceToScreen, bool isInside);
+    void printEnvironmentColumn(int x, float distanceToScreen, bool isInside);
+
     void printHurt();
     void printGUI();
-    void printObjects();
-    void printObjectsPart(float *viewAngles, int xFrom, int xTo, float distanceToScreen, bool isInside);
     void printMap();
     void printCrosshair();
     void printHealthBar();
