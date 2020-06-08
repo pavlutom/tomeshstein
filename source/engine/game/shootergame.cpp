@@ -550,11 +550,9 @@ void CShooterGame::printObjects() {
 void CShooterGame::printObjectsPart(float *viewAngles, int xFrom, int xTo, float distanceToScreen, bool isInside) {
     const std::vector<std::shared_ptr<CGameObject>> &objects = m_Objects.getAll();
     for (int i = 0; i < objects.size(); ++i) {
-
-
         if (objects[i]->getDistanceFromPlayer() <= 0.5f ||
             objects[i]->getDistanceFromPlayer() > m_RenderDistance ||
-            fabsf(viewAngles[i]) > m_FoV * 0.65f) continue; // object is not visible
+            fabsf(viewAngles[i]) > m_FoV * 0.65f) continue; // object is not visible -> skip
 
         std::shared_ptr<CTexture> texture = objects[i]->getTexture();
 
@@ -569,7 +567,6 @@ void CShooterGame::printObjectsPart(float *viewAngles, int xFrom, int xTo, float
         for (int x = 0; x < width; ++x) {
             if (objects[i]->getDistanceFromPlayer() > m_DistanceBuffer[ObjectX + x])
                 continue;
-//            m_DistanceBuffer[ObjectX + x] = objects[i]->getDistanceFromPlayer();
 
             for (int y = 0; y < height; ++y) {
                 Uint32 color = texture->get(x / width, y / height);
