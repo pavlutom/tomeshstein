@@ -41,6 +41,7 @@ protected:
     void openEnd();
 
     Uint32 blendColor(Uint32 color1, Uint32 color2, float blend);
+    std::shared_ptr<CTexture> getTileTexture(ETile tile);
 
     void printWorld();
     void printWorldPart(int xFrom, int xTo, float distanceToScreen, bool isInside);

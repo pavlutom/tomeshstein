@@ -426,6 +426,25 @@ Uint32 CShooterGame::blendColor(Uint32 color1, Uint32 color2, float blend) {
     return res;
 }
 
+std::shared_ptr<CTexture> CShooterGame::getTileTexture(ETile tile) {
+    switch (tile) {
+        case ETile::WALL:
+            return m_Textures[2];
+        case ETile::RED_WALL:
+            return m_Textures[1];
+        case ETile::DOOR:
+            return m_Textures[3];
+        case ETile::END:
+            return m_Textures[25];
+        case ETile::END_OPEN:
+            return m_Textures[26];
+        case ETile::MOSS_WALL:
+            return m_Textures[27];
+        default:
+            return m_Textures[0];
+    }
+}
+
 void CShooterGame::printWorld() {
     float distanceToScreen = (getScreenWidth() * 0.5f) / tan(m_FoV * 0.5f);
     bool isInside = m_Map[getMapIndex((int) m_Player.getX(), (int) m_Player.getY())] == ETile::ROOM;
@@ -457,7 +476,6 @@ void CShooterGame::printWorldColumn(int x, float distanceToScreen, bool isInside
     float dY = cosf(m_Player.getAngle() + angle) * step;
     float beamX = m_Player.getX();
     float beamY = m_Player.getY();
-    std::shared_ptr<CTexture> tex = m_Textures[0];
 
     while ((m_Map[getMapIndex((int) beamX, (int) beamY)] == ETile::EMPTY || m_Map[getMapIndex((int) beamX, (int) beamY)] == ETile::ROOM) && distance <= m_RenderDistance) {
         distance += step;
@@ -467,29 +485,9 @@ void CShooterGame::printWorldColumn(int x, float distanceToScreen, bool isInside
     m_DistanceBuffer[x] = distance;
 
     ETile tile = m_Map[getMapIndex((int) beamX, (int) beamY)];
+    std::shared_ptr<CTexture> tex = getTileTexture(tile);
 
-    switch (tile) {
-        case ETile::WALL:
-            tex = m_Textures[2];
-            break;
-        case ETile::RED_WALL:
-            tex = m_Textures[1];
-            break;
-        case ETile::DOOR:
-            tex = m_Textures[3];
-            break;
-        case ETile::END:
-            tex = m_Textures[25];
-            break;
-        case ETile::END_OPEN:
-            tex = m_Textures[26];
-            break;
-        case ETile::MOSS_WALL:
-            tex = m_Textures[27];
-            break;
-        default:
-            break;
-    }
+
 
     int ceiling = (int) (getScreenHeight() * 0.5f - getScreenHeight() / distance / cosf(angle));
 
