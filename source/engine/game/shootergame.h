@@ -29,6 +29,10 @@ protected:
     void onUserCreate() override;
     bool onUserUpdate(float elapsedTime, int & signal) override;
 
+    bool manageProjectiles(int & signal); /* returns true if the player is killed by a projectile */
+    void manageEnemies();
+    void managePowerups();
+
     bool manageInput();
 
     bool validPosition(float x, float y, bool wallsOnly = true);

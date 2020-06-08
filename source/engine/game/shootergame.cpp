@@ -240,12 +240,35 @@ bool CShooterGame::onUserUpdate(float elapsedTime, int & signal) {
     // sort objects (because locations changed)
     m_Objects.sort();
 
-    // manage projectiles
+    // manage collisions etc.
+    if (manageProjectiles(signal)) return false;
+    manageEnemies();
+    managePowerups();
+
+    printWorld();
+
+    printObjects();
+
+    if (m_HurtTime > 0) {
+        m_HurtTime -= elapsedTime;
+        printHurt();
+    }
+
+    printGUI();
+
+    printFrame();
+
+    setTitle("%s (%.f FPS)", getTitle(), 1 / elapsedTime);
+
+    return true;
+}
+
+bool CShooterGame::manageProjectiles(int & signal) {
     for (auto p = m_Objects.getProjectiles().rbegin(); p != m_Objects.getProjectiles().rend(); ++p) {
         if ((*p)->active() && (*p)->getDistanceFromPlayer() < 0.5f) {   // hit player
             if (m_Player.hurt((*p)->getDamage())) {  // player dead
                 signal = 0;
-                return false;   // game over
+                return true;   // game over
             }
             m_Objects.removeProjectile(*p);
             m_HurtTime = 0.25f;
@@ -256,8 +279,10 @@ bool CShooterGame::onUserUpdate(float elapsedTime, int & signal) {
             }
         }
     }
+    return false;
+}
 
-    // manage enemies
+void CShooterGame::manageEnemies() {
     for (auto e = m_Objects.getEnemies().rbegin(); e != m_Objects.getEnemies().rend(); ++e) {
         if ((*e)->hurt(m_Objects)) {    // enemy dies
             auto loot = (*e)->getLoot();
@@ -280,8 +305,9 @@ bool CShooterGame::onUserUpdate(float elapsedTime, int & signal) {
             (*e)->move();   // move along defined path
         }
     }
+}
 
-    // manage powerups
+void CShooterGame::managePowerups() {
     for (auto u = m_Objects.getPowerUps().rbegin(); u != m_Objects.getPowerUps().rend(); ++u) {
         if ((*u)->getDistanceFromPlayer() < 0.5f) {     // picked up by player
             (*u)->affectPlayer(m_Player);
@@ -291,23 +317,6 @@ bool CShooterGame::onUserUpdate(float elapsedTime, int & signal) {
             m_Objects.removePowerUp(*u);
         }
     }
-
-    printWorld();
-
-    printObjects();
-
-    if (m_HurtTime > 0) {
-        m_HurtTime -= elapsedTime;
-        printHurt();
-    }
-
-    printGUI();
-
-    printFrame();
-
-    setTitle("%s (%.f FPS)", getTitle(), 1 / elapsedTime);
-
-    return true;
 }
 
 bool CShooterGame::manageInput() {
