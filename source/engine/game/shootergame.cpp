@@ -458,16 +458,18 @@ void CShooterGame::printWorld() {
 
     // calculate and render the environment and objects
     // each one of n threads takes care of 1/n width of the screen
-    unsigned short numThreads = getRenderingThreadCount();
-    int xPart = getScreenWidth() / numThreads;
-    std::thread threads[numThreads];
-    for (int t = 0; t < numThreads; ++t) {
+    std::vector<CRendererThread> &threads = getRendererThreads();
+    int xPart = getScreenWidth() / threads.size();
+    for (int t = 0; t < threads.size(); ++t) {
         int from = t * xPart;
-        int to = t + 1 == numThreads ? getScreenWidth() : (t + 1) * xPart;
-        threads[t] = std::thread(&CShooterGame::printWorldPart, this, viewAngles, from, to, distanceToScreen, isInside);
+        int to = t + 1 == threads.size() ? getScreenWidth() : (t + 1) * xPart;
+
+        threads[t].execute([this, viewAngles, from, to, distanceToScreen, isInside](){
+            printWorldPart(viewAngles, from, to, distanceToScreen, isInside);
+        });
     }
-    for (int t = 0; t < numThreads; ++t) {
-        threads[t].join();
+    for (auto &thread : threads) {
+        thread.wait();
     }
 }
 void CShooterGame::printWorldPart(float *objectViewAngles, int xFrom, int xTo, float distanceToScreen, bool isInside) {
