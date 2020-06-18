@@ -6,9 +6,9 @@
 
 
 CShooterGame::CShooterGame(const char *title, unsigned width, unsigned height, unsigned short pixelsize,
-                           bool fullscreen, const char *mapName)
+                           bool fullscreen, unsigned short renderingThreadCount, const char *mapName)
         : tpge::CEngine(), m_MapName(mapName) {
-    construct(title, width, height, pixelsize, fullscreen);
+    construct(title, width, height, pixelsize, fullscreen, renderingThreadCount);
 }
 
 CShooterGame::CShooterGame(const tpge::CEngine & other, const char *mapName)
@@ -195,9 +195,30 @@ void CShooterGame::onUserCreate() {
     /* 07 - floor        */ m_Palette.push_back(floor);
 
     m_DistanceBuffer = new float[getScreenWidth()];
+
+    int screenH = getScreenHeight();
+    m_WorldCacheOutside = new Uint32[screenH];
+    m_WorldCacheInside = new Uint32[screenH];
+    for (int y = 0; y < screenH / 2; ++y) {
+        float shade = cbrtf(((screenH - y) - screenH * 0.5f - screenH / m_RenderDistance) /
+                            (screenH * 0.5f));
+
+        // ceiling
+        m_WorldCacheOutside[y] = m_Palette[1];
+        m_WorldCacheInside[y] = blendColor(m_Palette[6], TPGEColor::BLACK, shade);
+
+        // floor
+        m_WorldCacheOutside[screenH - 1 - y] = blendColor(m_Palette[2], m_Palette[4], shade);
+        m_WorldCacheInside[screenH - 1 - y] = blendColor(m_Palette[7], TPGEColor::BLACK, shade);
+    }
+
     m_HoldingPrevGun = false;
     m_HoldingNextGun = false;
+
     m_HurtTime = 0.0f;
+
+    m_FpsTimer = 0.0f;
+    m_FpsCounter = 0;
 }
 
 bool CShooterGame::onUserUpdate(float elapsedTime, int & signal) {
@@ -223,12 +244,39 @@ bool CShooterGame::onUserUpdate(float elapsedTime, int & signal) {
     // sort objects (because locations changed)
     m_Objects.sort();
 
-    // manage projectiles
+    // manage collisions etc.
+    if (manageProjectiles(signal)) return false;
+    manageEnemies();
+    managePowerups();
+
+    printWorld();
+
+    if (m_HurtTime > 0) {
+        m_HurtTime -= elapsedTime;
+        printHurt();
+    }
+
+    printGUI();
+
+    printFrame();
+
+    m_FpsTimer -= elapsedTime;
+    ++m_FpsCounter;
+    if (m_FpsTimer < 0) {
+        setTitle("%s (%u FPS)", getTitle(), m_FpsCounter);
+        m_FpsTimer += 1.0f;
+        m_FpsCounter = 0;
+    }
+
+    return true;
+}
+
+bool CShooterGame::manageProjectiles(int & signal) {
     for (auto p = m_Objects.getProjectiles().rbegin(); p != m_Objects.getProjectiles().rend(); ++p) {
         if ((*p)->active() && (*p)->getDistanceFromPlayer() < 0.5f) {   // hit player
             if (m_Player.hurt((*p)->getDamage())) {  // player dead
                 signal = 0;
-                return false;   // game over
+                return true;   // game over
             }
             m_Objects.removeProjectile(*p);
             m_HurtTime = 0.25f;
@@ -239,8 +287,10 @@ bool CShooterGame::onUserUpdate(float elapsedTime, int & signal) {
             }
         }
     }
+    return false;
+}
 
-    // manage enemies
+void CShooterGame::manageEnemies() {
     for (auto e = m_Objects.getEnemies().rbegin(); e != m_Objects.getEnemies().rend(); ++e) {
         if ((*e)->hurt(m_Objects)) {    // enemy dies
             auto loot = (*e)->getLoot();
@@ -263,8 +313,9 @@ bool CShooterGame::onUserUpdate(float elapsedTime, int & signal) {
             (*e)->move();   // move along defined path
         }
     }
+}
 
-    // manage powerups
+void CShooterGame::managePowerups() {
     for (auto u = m_Objects.getPowerUps().rbegin(); u != m_Objects.getPowerUps().rend(); ++u) {
         if ((*u)->getDistanceFromPlayer() < 0.5f) {     // picked up by player
             (*u)->affectPlayer(m_Player);
@@ -274,23 +325,6 @@ bool CShooterGame::onUserUpdate(float elapsedTime, int & signal) {
             m_Objects.removePowerUp(*u);
         }
     }
-
-    printWorld();
-
-    printObjects();
-
-    if (m_HurtTime > 0) {
-        m_HurtTime -= elapsedTime;
-        printHurt();
-    }
-
-    printGUI();
-
-    printFrame();
-
-    setTitle("%s (%.f FPS)", getTitle(), 1 / elapsedTime);
-
-    return true;
 }
 
 bool CShooterGame::manageInput() {
@@ -400,84 +434,136 @@ Uint32 CShooterGame::blendColor(Uint32 color1, Uint32 color2, float blend) {
     return res;
 }
 
+std::shared_ptr<CTexture> CShooterGame::getTileTexture(ETile tile) {
+    switch (tile) {
+        case ETile::WALL:
+            return m_Textures[2];
+        case ETile::RED_WALL:
+            return m_Textures[1];
+        case ETile::DOOR:
+            return m_Textures[3];
+        case ETile::END:
+            return m_Textures[25];
+        case ETile::END_OPEN:
+            return m_Textures[26];
+        case ETile::MOSS_WALL:
+            return m_Textures[27];
+        default:
+            return m_Textures[0];
+    }
+}
+
 void CShooterGame::printWorld() {
     float distanceToScreen = (getScreenWidth() * 0.5f) / tan(m_FoV * 0.5f);
-    bool inside = m_Map[getMapIndex((int) m_Player.getX(), (int) m_Player.getY())] == ETile::ROOM;
+    bool isInside = m_Map[getMapIndex((int) m_Player.getX(), (int) m_Player.getY())] == ETile::ROOM;
 
-    for (int x = 0; x < getScreenWidth(); x++) {
+    // calculate view angles for objects
+    const std::vector<std::shared_ptr<CGameObject>> &objects = m_Objects.getAll();
+    float *viewAngles = new float[objects.size()];
+    for (int i = 0; i < objects.size(); ++i) {
+        float angle = atan2f(cosf(m_Player.getAngle()), sinf(m_Player.getAngle())) - objects[i]->getPlayerViewAngle();
+        angle += (angle < -3.14f ? 6.28f : (angle > 3.14 ? -6.28 : 0.0f));
+        viewAngles[i] = angle;
+    }
 
-        float angle = atan2f(x - getScreenWidth() * 0.5f, distanceToScreen);
+    // calculate and render the environment and objects
+    // each one of n threads takes care of 1/n width of the screen
+    std::vector<CRendererThread> &threads = getRendererThreads();
+    int xPart = getScreenWidth() / threads.size();
+    for (int t = 0; t < threads.size(); ++t) {
+        int from = t * xPart;
+        int to = t + 1 == threads.size() ? getScreenWidth() : (t + 1) * xPart;
 
-        float step = 0.005f;
-        float distance = 0.0f;
-        float dX = sinf(m_Player.getAngle() + angle) * step;
-        float dY = cosf(m_Player.getAngle() + angle) * step;
-        float beamX = m_Player.getX();
-        float beamY = m_Player.getY();
-        std::shared_ptr<CTexture> tex = m_Textures[0];
+        threads[t].execute([this, viewAngles, from, to, distanceToScreen, isInside](){
+            printWorldPart(viewAngles, from, to, distanceToScreen, isInside);
+        });
+    }
+    for (auto &thread : threads) {
+        thread.wait();
+    }
+}
+void CShooterGame::printWorldPart(float *objectViewAngles, int xFrom, int xTo, float distanceToScreen, bool isInside) {
+    const std::vector<std::shared_ptr<CGameObject>> &objects = m_Objects.getAll();
 
-        while ((m_Map[getMapIndex((int) beamX, (int) beamY)] == ETile::EMPTY || m_Map[getMapIndex((int) beamX, (int) beamY)] == ETile::ROOM) && distance <= m_RenderDistance) {
-            distance += step;
-            beamX += dX;
-            beamY += dY;
-        }
-        m_DistanceBuffer[x] = distance;
+    // print environment
+    for (int x = xFrom; x < xTo; ++x) {
+        printEnvironmentColumn(x, distanceToScreen, isInside);
+    }
 
-        ETile tile = m_Map[getMapIndex((int) beamX, (int) beamY)];
+    // print objects
+    for (int i = 0; i < objects.size(); ++i) {
+        if (objects[i]->getDistanceFromPlayer() <= 0.5f ||
+            objects[i]->getDistanceFromPlayer() > m_RenderDistance ||
+            fabsf(objectViewAngles[i]) > m_FoV * 0.65f) continue; // object is not visible -> skip
 
-        switch (tile) {
-            case ETile::WALL:
-                tex = m_Textures[2];
-                break;
-            case ETile::RED_WALL:
-                tex = m_Textures[1];
-                break;
-            case ETile::DOOR:
-                tex = m_Textures[3];
-                break;
-            case ETile::END:
-                tex = m_Textures[25];
-                break;
-            case ETile::END_OPEN:
-                tex = m_Textures[26];
-                break;
-            case ETile::MOSS_WALL:
-                tex = m_Textures[27];
-                break;
-            default:
-                break;
-        }
+        std::shared_ptr<CTexture> texture = objects[i]->getTexture();
 
-        int ceiling = (int) (getScreenHeight() * 0.5f - getScreenHeight() / distance / cosf(angle));
+        float perspectiveScale = 1.0f / objects[i]->getDistanceFromPlayer() / cosf(objectViewAngles[i]);
 
-        float tX = beamY;
-        if (abs(beamX - round(beamX)) > abs(beamY - round(beamY))) {
-            tX = beamX;
-        }
+        float height = getScreenHeight() * objects[i]->getScale() * 2 * perspectiveScale;
+        float width = height * texture->getAspectRatio();
 
-        for (int y = 0; y < getScreenHeight(); y++) {
-            if (y < ceiling) {
-                if (inside) {
-                    float shade = ((getScreenHeight() - y) - getScreenHeight() * 0.5f - getScreenHeight() / m_RenderDistance) /
-                                  (getScreenHeight() * 0.5f);
-                    drawPixel(x, y, blendColor(m_Palette[6], TPGEColor::BLACK, cbrtf(shade)));
-                } else {
-                    drawPixel(x, y, m_Palette[1]);
-                }
-            } else if (y < getScreenHeight() - ceiling) {
-                float shade = 1 - (distance / m_RenderDistance);
-                float tY = (float) (y - ceiling) / (getScreenHeight() - 2 * ceiling);
-                Uint32 col = tex->get(tX, tY);
-                drawPixel(x, y, blendColor(col, (inside ? TPGEColor::BLACK : m_Palette[3]), shade));
-            } else {
-                float shade = (y - getScreenHeight() * 0.5f - getScreenHeight() / m_RenderDistance) /
-                              (getScreenHeight() * 0.5f);
-                if (inside) {
-                    drawPixel(x, y, blendColor(m_Palette[7], TPGEColor::BLACK, cbrtf(shade)));
-                } else {
-                    drawPixel(x, y, blendColor(m_Palette[2], m_Palette[4], cbrtf(shade)));
+        int ObjectX = (int)(distanceToScreen * tanf(objectViewAngles[i]) + 0.5f * (getScreenWidth() - width));
+        int objectY = (int)(getScreenHeight() * (0.5f - perspectiveScale) + ((1 - objects[i]->getScale()) * 0.5f * height / objects[i]->getScale()));
+
+        for (int x = 0; x < width; ++x) {
+            if (objects[i]->getDistanceFromPlayer() > m_DistanceBuffer[ObjectX + x])
+                continue;
+
+            for (int y = 0; y < height; ++y) {
+                Uint32 color = texture->get(x / width, y / height);
+
+                if (!(color & 0x00FFFFFF))  // black color means transparent
+                    continue;
+
+                int screenX = ObjectX + x;
+                int screenY = objectY + y;
+
+                // render only within the specified x coordinates (thread's portion of screen)
+                if (screenX >= xFrom && screenX < xTo && screenY >= 0 && screenY < getScreenHeight()) {
+                    float shade = sqrt(1 - (objects[i]->getDistanceFromPlayer() / m_RenderDistance));
+                    drawPixel(screenX, screenY, blendColor(color, (isInside ? TPGEColor::BLACK : m_Palette[3]), shade));
                 }
             }
+        }
+    }
+}
+
+void CShooterGame::printEnvironmentColumn(int x, float distanceToScreen, bool isInside) {
+    float angle = atan2f(x - getScreenWidth() * 0.5f, distanceToScreen);
+
+    float step = 0.005f;
+    float distance = 0.0f;
+    float dX = sinf(m_Player.getAngle() + angle) * step;
+    float dY = cosf(m_Player.getAngle() + angle) * step;
+    float beamX = m_Player.getX();
+    float beamY = m_Player.getY();
+
+    while ((m_Map[getMapIndex((int) beamX, (int) beamY)] == ETile::EMPTY || m_Map[getMapIndex((int) beamX, (int) beamY)] == ETile::ROOM) && distance <= m_RenderDistance) {
+        distance += step;
+        beamX += dX;
+        beamY += dY;
+    }
+    m_DistanceBuffer[x] = distance;
+
+    ETile tile = m_Map[getMapIndex((int) beamX, (int) beamY)];
+    std::shared_ptr<CTexture> tex = getTileTexture(tile);
+
+    int ceiling = (int) (getScreenHeight() * 0.5f - getScreenHeight() / distance / cosf(angle));
+
+    float tX = beamY;
+    if (abs(beamX - round(beamX)) > abs(beamY - round(beamY))) {
+        tX = beamX;
+    }
+
+    for (int y = 0; y < getScreenHeight(); y++) {
+        if (y < ceiling || y > getScreenHeight() - ceiling) {
+            drawPixel(x, y, isInside ? m_WorldCacheInside[y] : m_WorldCacheOutside[y]);
+        } else {
+            float shade = 1 - (distance / m_RenderDistance);
+            float tY = (float) (y - ceiling) / (getScreenHeight() - 2 * ceiling);
+            Uint32 col = tex->get(tX, tY);
+            drawPixel(x, y, blendColor(col, (isInside ? TPGEColor::BLACK : m_Palette[3]), shade));
         }
     }
 }
@@ -492,46 +578,6 @@ void CShooterGame::printGUI() {
     printHealthBar();
     printGun();
     printKeys();
-}
-
-void CShooterGame::printObjects() {
-    float distanceToScreen = (getScreenWidth() * 0.5f) / tan(m_FoV * 0.5f);
-    bool inside = m_Map[getMapIndex((int) m_Player.getX(), (int) m_Player.getY())] == ETile::ROOM;
-
-    for (auto &o : m_Objects.getAll()) {
-        float objectViewAngle =
-                atan2f(cosf(m_Player.getAngle()), sinf(m_Player.getAngle())) - o->getPlayerViewAngle();
-        objectViewAngle += (objectViewAngle < -3.14f ? 6.28f : (objectViewAngle > 3.14 ? -6.28 : 0.0f));
-
-        if (o->getDistanceFromPlayer() > 0.5f && o->getDistanceFromPlayer() <= m_RenderDistance &&
-            fabsf(objectViewAngle) <=
-            m_FoV * 0.65f) { // visible (0.5f would trigger when middle of the enemy is out of screen bounds)
-            float height = (getScreenHeight() -
-                            2 * (getScreenHeight() * 0.5f -
-                                 getScreenHeight() / o->getDistanceFromPlayer() / cosf(objectViewAngle))) *
-                           o->getScale();
-            float width = o->getTexture()->getAspectRatio() * height;
-            int oY = (int) (getScreenHeight() * 0.5f -
-                            getScreenHeight() / o->getDistanceFromPlayer() / cosf(objectViewAngle) +
-                            ((1 - o->getScale()) * 0.5f * height / o->getScale()));
-            int oX = (int) (distanceToScreen * tanf(objectViewAngle) + (getScreenWidth() - width) * 0.5f);
-            for (int x = 0; x < width; x++) {
-                if (o->getDistanceFromPlayer() <= m_DistanceBuffer[oX + x]) {
-                    for (int y = 0; y < height; y++) {
-                        Uint32 col = o->getTexture()->get(x / width, y / height);
-                        if ((col & 0x00FFFFFF) != 0) { // black = transparent
-                            int scX = oX + x;
-                            int scY = oY + y;
-                            if (scX >= 0 && scX < getScreenWidth() && scY >= 0 && scY < getScreenHeight()) {
-                                float shade = 1 - (o->getDistanceFromPlayer() / m_RenderDistance);
-                                drawPixel(scX, scY, blendColor(col, (inside ? TPGEColor::BLACK : m_Palette[3]), sqrt(shade)));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
 
 void CShooterGame::printMap() {

@@ -8,6 +8,7 @@
 #include <vector>
 #include <map>
 #include <algorithm>
+#include <thread>
 
 #include "../tpge/TPGE.h"
 #include "../../objects/gameobject.h"
@@ -17,7 +18,7 @@
 
 class CShooterGame : public tpge::CEngine {
 public:
-    CShooterGame(const char * title, unsigned width, unsigned height, unsigned short pixelsize, bool fullscreen, const char * mapName);
+    CShooterGame(const char * title, unsigned width, unsigned height, unsigned short pixelsize, bool fullscreen, unsigned short renderingThreadCount, const char * mapName);
     CShooterGame(const tpge::CEngine & other, const char * mapName);
 
 protected:
@@ -28,6 +29,10 @@ protected:
     void onUserCreate() override;
     bool onUserUpdate(float elapsedTime, int & signal) override;
 
+    bool manageProjectiles(int & signal); /* returns true if the player is killed by a projectile */
+    void manageEnemies();
+    void managePowerups();
+
     bool manageInput();
 
     bool validPosition(float x, float y, bool wallsOnly = true);
@@ -36,11 +41,14 @@ protected:
     void openEnd();
 
     Uint32 blendColor(Uint32 color1, Uint32 color2, float blend);
+    std::shared_ptr<CTexture> getTileTexture(ETile tile);
 
     void printWorld();
+    void printWorldPart(float *objectViewAngles, int xFrom, int xTo, float distanceToScreen, bool isInside);
+    void printEnvironmentColumn(int x, float distanceToScreen, bool isInside);
+
     void printHurt();
     void printGUI();
-    void printObjects();
     void printMap();
     void printCrosshair();
     void printHealthBar();
@@ -71,10 +79,15 @@ protected:
 
     float *m_DistanceBuffer;
 
+    Uint32 *m_WorldCacheOutside;
+    Uint32 *m_WorldCacheInside;
+
     bool m_HoldingPrevGun;
     bool m_HoldingNextGun;
 
     float m_HurtTime;
+    float m_FpsTimer;
+    unsigned m_FpsCounter;
 };
 
 

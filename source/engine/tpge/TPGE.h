@@ -8,6 +8,10 @@
 #include <SDL2/SDL.h>
 #include <chrono>
 #include <iostream>
+#include <vector>
+
+#include "../utils/threading/renderer_thread.h"
+
 
 namespace tpge {
 
@@ -16,7 +20,7 @@ namespace tpge {
         CEngine();
         ~CEngine();
 
-        bool construct(const char *title, unsigned width, unsigned height, unsigned short pixelSize, bool fullscreen);
+        bool construct(const char *title, unsigned width, unsigned height, unsigned short pixelSize, bool fullscreen, unsigned short renderingThreadCount);
         bool inWindowOf(const CEngine &other);
         void destroy();
         int run();
@@ -162,6 +166,8 @@ namespace tpge {
             SDL_SetWindowTitle(m_Window, buffer);
         }
 
+        std::vector<CRendererThread> &getRendererThreads();
+
     private:
         bool m_Root;
 
@@ -176,6 +182,8 @@ namespace tpge {
         SDL_Texture *m_ScreenTexture;
         SDL_Texture *m_OverlayTexture;
         Uint32 *m_Pixels;
+
+        std::vector<CRendererThread> m_RendererThreads;
 
         bool m_IsOverlayOn;
 

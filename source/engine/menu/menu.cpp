@@ -4,10 +4,10 @@
 
 #include "menu.h"
 
-CMenu::CMenu(const char *title, unsigned width, unsigned height, unsigned short pixelsize, bool fullscreen)
+CMenu::CMenu(const char *title, unsigned width, unsigned height, unsigned short pixelsize, bool fullscreen, unsigned short renderingThreadCount)
         : m_Header("../textures/menu_header.bmp"),
         m_CurrentMenu({}, [](int){ return false; }) {
-    construct(title, width, height, pixelsize, fullscreen);
+    construct(title, width, height, pixelsize, fullscreen, renderingThreadCount);
 
 }
 

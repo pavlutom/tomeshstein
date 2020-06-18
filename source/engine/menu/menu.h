@@ -17,7 +17,7 @@
 
 class CMenu : public tpge::CEngine {
 public:
-    CMenu(const char * title, unsigned width, unsigned height, unsigned short pixelsize, bool fullscreen);
+    CMenu(const char * title, unsigned width, unsigned height, unsigned short pixelsize, bool fullscreen, unsigned short renderingThreadCount);
 
 protected:
     struct TMenu {
