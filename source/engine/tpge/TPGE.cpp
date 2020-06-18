@@ -108,7 +108,6 @@ bool tpge::CEngine::inWindowOf(const tpge::CEngine &other) {
 
 
 void tpge::CEngine::destroy() {
-    terminateRendererThreads();
     SDL_DestroyWindow(m_Window);
     SDL_Quit();
 }
@@ -142,13 +141,11 @@ int tpge::CEngine::run() {
         running &= onUserUpdate(elapsed, signal);
     }
 
-    return signal;
-}
-
-void tpge::CEngine::terminateRendererThreads() {
     for (auto &thread : m_RendererThreads) {
         thread.terminate();
     }
+
+    return signal;
 }
 
 bool tpge::CEngine::isKeyPressed(SDL_Scancode key) {

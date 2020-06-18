@@ -26,8 +26,6 @@ namespace tpge {
         int run();
 
     protected:
-        void terminateRendererThreads();
-
         virtual void onUserCreate()                                 = 0;
         virtual bool onUserUpdate(float elapsedTime, int & signal)  = 0;
 

@@ -222,14 +222,12 @@ bool CShooterGame::onUserUpdate(float elapsedTime, int & signal) {
 
     if (!manageInput()) {
         signal = 0;
-        terminateRendererThreads();
         return false;
     }
 
     // end
     if ((int) m_Player.getX() == m_EndX && (int) m_Player.getY() == m_EndY) {
         signal = 1;
-        terminateRendererThreads();
         return false;
     }
 
