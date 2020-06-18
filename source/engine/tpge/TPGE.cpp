@@ -72,6 +72,8 @@ bool tpge::CEngine::construct(const char *title, unsigned width, unsigned height
     m_OverlayTexture = SDL_CreateTexture(m_Renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_TARGET, m_Width, m_Height);
     SDL_SetTextureBlendMode(m_OverlayTexture, SDL_BLENDMODE_BLEND);
 
+    m_IsOverlayOn = false;
+
     m_Pixels = (Uint32 *)malloc(m_Width * m_Height * sizeof(Uint32));
 
     m_Root = true;
@@ -98,6 +100,8 @@ bool tpge::CEngine::inWindowOf(const tpge::CEngine &other) {
 
     m_ScreenTexture = other.m_ScreenTexture;
     m_OverlayTexture = other.m_OverlayTexture;
+
+    m_IsOverlayOn = false;
 
     m_Pixels = other.m_Pixels;
 

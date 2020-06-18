@@ -195,6 +195,7 @@ void CShooterGame::onUserCreate() {
     /* 07 - floor        */ m_Palette.push_back(floor);
 
     m_DistanceBuffer = new float[getScreenWidth()];
+    memset(m_DistanceBuffer, 0, getScreenWidth() * sizeof(float));
 
     int screenH = getScreenHeight();
     m_WorldCacheOutside = new Uint32[screenH];
