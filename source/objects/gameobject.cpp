@@ -46,7 +46,9 @@ float CGameObject::getScale() const {
 }
 
 bool operator<(const std::shared_ptr<CGameObject> & lhs, const std::shared_ptr<CGameObject> & rhs) {   // inverted to render the nearest object as the last
-    return   lhs->m_DistanceFromPlayer > rhs->m_DistanceFromPlayer ||
-           ((lhs->m_DistanceFromPlayer == rhs->m_DistanceFromPlayer && lhs->m_X > rhs->m_Y) ||
-            (lhs->m_X == rhs->m_X && lhs->m_Y > rhs->m_Y));
+    if (lhs->m_DistanceFromPlayer != rhs->m_DistanceFromPlayer)
+        return lhs->m_DistanceFromPlayer > rhs->m_DistanceFromPlayer;
+    if (lhs->m_X != rhs->m_X)
+        return lhs->m_X > rhs->m_X;
+    return lhs->m_Y > rhs->m_Y;
 }
