@@ -504,11 +504,13 @@ void CShooterGame::printWorldPart(float *objectViewAngles, int xFrom, int xTo, f
         float height = getScreenHeight() * objects[i]->getScale() * 2 * perspectiveScale;
         float width = height * texture->getAspectRatio();
 
-        int ObjectX = (int)(distanceToScreen * tanf(objectViewAngles[i]) + 0.5f * (getScreenWidth() - width));
+        int objectX = (int)(distanceToScreen * tanf(objectViewAngles[i]) + 0.5f * (getScreenWidth() - width));
         int objectY = (int)(getScreenHeight() * (0.5f - perspectiveScale) + ((1 - objects[i]->getScale()) * 0.5f * height / objects[i]->getScale()));
 
         for (int x = 0; x < width; ++x) {
-            if (objects[i]->getDistanceFromPlayer() > m_DistanceBuffer[ObjectX + x])
+            int screenX = objectX + x;
+
+            if (screenX < 0 || screenX >= getScreenWidth() || objects[i]->getDistanceFromPlayer() > m_DistanceBuffer[screenX])
                 continue;
 
             for (int y = 0; y < height; ++y) {
@@ -517,7 +519,6 @@ void CShooterGame::printWorldPart(float *objectViewAngles, int xFrom, int xTo, f
                 if (!(color & 0x00FFFFFF))  // black color means transparent
                     continue;
 
-                int screenX = ObjectX + x;
                 int screenY = objectY + y;
 
                 // render only within the specified x coordinates (thread's portion of screen)
