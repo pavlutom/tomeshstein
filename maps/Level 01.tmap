@@ -39,7 +39,6 @@ enemy:  0 {[29.5, 25.5]}
 
 // powerups (health, guns, etc.)
 
-powerup:    4 [18.5, 42.5]
 powerup:    4 [35.5, 14.5]
 powerup:    1 [13.5, 42]
 powerup:    2 [12.5, 5.5]
@@ -52,7 +51,7 @@ powerup:    9 [16.5, 26.5]
 powerup:   10 [15.5, 33.5]
 powerup:   11 [10.5, 8.5]
 powerup:   12 [20.5, 4.5]
-powerup:   13 [18.5, 42.5]
+powerup:   13 [29.5, 24.5]
 
 
 // map structure
