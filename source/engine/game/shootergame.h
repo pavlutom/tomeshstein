@@ -86,6 +86,8 @@ protected:
     bool m_HoldingNextGun;
 
     float m_HurtTime;
+    float m_FpsTimer;
+    unsigned m_FpsCounter;
 };
 
 

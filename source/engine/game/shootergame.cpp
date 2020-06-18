@@ -214,7 +214,11 @@ void CShooterGame::onUserCreate() {
 
     m_HoldingPrevGun = false;
     m_HoldingNextGun = false;
+
     m_HurtTime = 0.0f;
+
+    m_FpsTimer = 0.0f;
+    m_FpsCounter = 0;
 }
 
 bool CShooterGame::onUserUpdate(float elapsedTime, int & signal) {
@@ -256,7 +260,13 @@ bool CShooterGame::onUserUpdate(float elapsedTime, int & signal) {
 
     printFrame();
 
-    setTitle("%s (%.f FPS)", getTitle(), 1 / elapsedTime);
+    m_FpsTimer -= elapsedTime;
+    ++m_FpsCounter;
+    if (m_FpsTimer < 0) {
+        setTitle("%s (%u FPS)", getTitle(), m_FpsCounter);
+        m_FpsTimer += 1.0f;
+        m_FpsCounter = 0;
+    }
 
     return true;
 }
