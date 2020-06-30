@@ -168,6 +168,8 @@ namespace tpge {
 
         std::vector<CRendererThread> &getRendererThreads();
 
+        void resetClock(float elapsedTime = 0);
+
     private:
         bool m_Root;
 
@@ -189,7 +191,12 @@ namespace tpge {
 
         const Uint8 *m_KeyboardState;
 
+        std::chrono::system_clock::time_point m_T1;
+        std::chrono::system_clock::time_point m_T2;
+
         static const uint16_t font[96][12];
+
+        float tick();
     };
 }
 

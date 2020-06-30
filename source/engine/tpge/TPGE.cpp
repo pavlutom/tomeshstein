@@ -4,7 +4,9 @@
 
 #include "TPGE.h"
 
-tpge::CEngine::CEngine() : m_Window(nullptr) {}
+tpge::CEngine::CEngine() : m_Window(nullptr),
+                           m_T1(std::chrono::system_clock::now()),
+                           m_T2(std::chrono::system_clock::now()) {}
 
 tpge::CEngine::~CEngine() {
     if (m_Root) {
@@ -128,16 +130,12 @@ void tpge::CEngine::printFrame() {
 
 int tpge::CEngine::run() {
     onUserCreate();
-    std::chrono::system_clock::time_point t1 = std::chrono::system_clock::now();
-    std::chrono::system_clock::time_point t2 = std::chrono::system_clock::now();
     bool running = true;
     int signal = 0;
     float elapsed;
     SDL_Event event;
     while (running) {
-        elapsed = std::chrono::duration_cast<std::chrono::duration<float>>(t2 - t1).count();
-        t1 = t2;
-        t2 = std::chrono::system_clock::now();
+        elapsed = tick();
 
         while (SDL_PollEvent(&event)) {
             running &= event.type != SDL_QUIT;
@@ -260,6 +258,23 @@ const char *tpge::CEngine::getTitle() {
 
 std::vector<CRendererThread> &tpge::CEngine::getRendererThreads() {
     return m_RendererThreads;
+}
+
+float tpge::CEngine::tick() {
+    float elapsed = std::chrono::duration_cast<std::chrono::duration<float>>(m_T2 - m_T1).count();
+
+    m_T1 = m_T2;
+    m_T2 = std::chrono::system_clock::now();
+
+    return elapsed;
+}
+
+void tpge::CEngine::resetClock(float elapsedTime) {
+    std::chrono::system_clock::time_point now = std::chrono::system_clock::now();
+    std::chrono::duration<long, std::micro> elapsed((long)((double)elapsedTime * std::micro::den));
+
+    m_T1 = now - elapsed;
+    m_T2 = now;
 }
 
 const uint16_t tpge::CEngine::font[96][12] = {

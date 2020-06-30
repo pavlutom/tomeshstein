@@ -18,6 +18,7 @@
 class CMenu : public tpge::CEngine {
 public:
     CMenu(const char * title, unsigned width, unsigned height, unsigned short pixelsize, bool fullscreen, unsigned short renderingThreadCount);
+    CMenu(const tpge::CEngine &other);
 
 protected:
     struct TMenu {
@@ -31,8 +32,8 @@ protected:
         std::function<bool(int)> m_Execute;
     };
 
-    void onUserCreate() override;
-    bool onUserUpdate(float elapsedTime, int & signal) override;
+    virtual void onUserCreate() override;
+    virtual bool onUserUpdate(float elapsedTime, int & signal) override;
 
     void setMenu(const char * name);
 

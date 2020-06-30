@@ -4,6 +4,8 @@
 
 #include "shootergame.h"
 
+#include "../menu/pause_menu.h"
+
 
 CShooterGame::CShooterGame(const char *title, unsigned width, unsigned height, unsigned short pixelsize,
                            bool fullscreen, unsigned short renderingThreadCount, const char *mapName)
@@ -225,9 +227,16 @@ void CShooterGame::onUserCreate() {
 bool CShooterGame::onUserUpdate(float elapsedTime, int & signal) {
     m_Player.update(elapsedTime);
 
-    if (!manageInput()) {
-        signal = 0;
-        return false;
+    bool pause = !manageInput();
+    if (pause) {
+        std::shared_ptr<CPauseMenu> pauseMenu = std::make_shared<CPauseMenu>(*this);
+        int menuSignal = pauseMenu->run();
+
+        if (menuSignal == 1) {
+            signal = 0;
+            return false;
+        }
+        resetClock(elapsedTime);
     }
 
     // end
