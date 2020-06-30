@@ -12,7 +12,6 @@ void CPauseMenu::onUserCreate() {
     m_Menus.emplace("pause", std::make_shared<TMenu>(TMenu({"Continue", "Quit"}, [&](int selected) {
         switch (selected) {
             case 0: // continue
-                return false;
             case 1: // quit game
                 return true;
             default:
@@ -27,6 +26,8 @@ void CPauseMenu::onUserCreate() {
 
 bool CPauseMenu::onUserUpdate(float elapsedTime, int &signal) {
     bool result = CMenu::onUserUpdate(elapsedTime, signal);
-    signal = result ? 1 : 0;
+    if (!result) {
+        signal = m_Selected;
+    }
     return result;
 }
