@@ -8,7 +8,11 @@ CMenu::CMenu(const char *title, unsigned width, unsigned height, unsigned short 
         : m_Header("../textures/menu_header.bmp"),
         m_CurrentMenu({}, [](int){ return false; }) {
     construct(title, width, height, pixelsize, fullscreen, renderingThreadCount);
+}
 
+CMenu::CMenu(const tpge::CEngine &other)
+        : tpge::CEngine(), m_Header("../textures/menu_header.bmp"), m_CurrentMenu({}, [](int){ return false; }) {
+    inWindowOf(other);
 }
 
 void CMenu::onUserCreate() {
