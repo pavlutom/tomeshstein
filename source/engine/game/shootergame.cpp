@@ -236,6 +236,7 @@ bool CShooterGame::onUserUpdate(float elapsedTime, int & signal) {
             signal = 0;
             return false;
         }
+        resetClock(elapsedTime);
     }
 
     // end
